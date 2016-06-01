@@ -47,6 +47,9 @@ public class TestSerializer {
 			.toS3(S3Location.of("my-bucket-name", "abcd1234random.jpg"));
 		System.out.println(mapper.writeValueAsString(save));
 
+		save = SavedImage.withId("extraparams").withQuality(90).withParam("png_quantize", true).withParam("extension", ".png").toAzure(AzureLocation.of("myAccount", "http://gobbledygook"));
+		System.out.println(mapper.writeValueAsString(save));
+
 		save = SavedImage.withId("4321nonrandom").withQuality(90).toAzure(AzureLocation.of("myAccount", "http://gobbledygook"));
 		System.out.println(mapper.writeValueAsString(save));
 

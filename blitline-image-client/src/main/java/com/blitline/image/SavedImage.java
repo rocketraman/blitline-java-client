@@ -4,8 +4,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -30,11 +32,17 @@ public class SavedImage implements Serializable {
 	public final S3Location s3Destination;
 	public final AzureLocation azureDestination;
 
+	private final Map<String, Object> params;
+
 	public SavedImage(String imageIdentifier, Integer quality, boolean saveMetadata, boolean skip, S3Location s3Destination, AzureLocation azureDestination) {
-	    this(imageIdentifier, quality, saveMetadata, skip, s3Destination, azureDestination, null);
+		this(imageIdentifier, quality, saveMetadata, skip, s3Destination, azureDestination, null, null);
 	}
 
 	public SavedImage(String imageIdentifier, Integer quality, boolean saveMetadata, boolean skip, S3Location s3Destination, AzureLocation azureDestination, Map<String, Object> setExif) {
+		this(imageIdentifier, quality, saveMetadata, skip, s3Destination, azureDestination, setExif, null);
+	}
+
+	public SavedImage(String imageIdentifier, Integer quality, boolean saveMetadata, boolean skip, S3Location s3Destination, AzureLocation azureDestination, Map<String, Object> setExif, Map<String, Object> params) {
 		if(s3Destination != null && azureDestination != null)
 			throw new IllegalArgumentException("only one destination location may be specified");
 
@@ -49,6 +57,12 @@ public class SavedImage implements Serializable {
 		this.azureDestination = azureDestination;
 
 		this.setExif = setExif;
+		this.params = params;
+	}
+
+	@JsonAnyGetter
+	public Map<String, Object> getParams() {
+		return params;
 	}
 
 	public static Builder withId(String imageIdentifier) {
@@ -60,6 +74,7 @@ public class SavedImage implements Serializable {
 		private Integer quality;
 		private boolean saveMetadata = false;
 		private Map<String, Object> exif = new HashMap<String, Object>();
+		private Map<String, Object> params = null;
 
 		public Builder(String imageIdentifier) {
 			this.imageIdentifier = imageIdentifier;
@@ -76,16 +91,28 @@ public class SavedImage implements Serializable {
 		}
 
 		public Builder withExifHeader(String key, Object value) {
-		    exif.put(key, value);
+			exif.put(key, value);
+			return this;
+		}
+
+		public Builder withParam(String key, Object value) {
+				if(params == null) {
+					params = new HashMap<String, Object>();
+				}
+		    params.put(key, value);
 		    return this;
 		}
 
 		private Map<String, Object> exifOrNull() {
-		    return exif.isEmpty() ? null : exif;
+			return exif.isEmpty() ? null : exif;
+		}
+
+		private Map<String, Object> paramsOrNull() {
+			return params;
 		}
 
 		public SavedImage toS3(S3Location s3Destination) {
-			return new SavedImage(imageIdentifier, quality, saveMetadata, false, s3Destination, null, exifOrNull());
+			return new SavedImage(imageIdentifier, quality, saveMetadata, false, s3Destination, null, exifOrNull(), paramsOrNull());
 		}
 
 		public SavedImage toS3(String bucket, String key) {
@@ -93,7 +120,7 @@ public class SavedImage implements Serializable {
 		}
 
 		public SavedImage toAzure(AzureLocation azureDestination) {
-			return new SavedImage(imageIdentifier, quality, saveMetadata, false, null, azureDestination, exifOrNull());
+			return new SavedImage(imageIdentifier, quality, saveMetadata, false, null, azureDestination, exifOrNull(), paramsOrNull());
 		}
 
 		public SavedImage toAzure(String accountName, String sharedAccessSignature) {
@@ -101,7 +128,7 @@ public class SavedImage implements Serializable {
 		}
 
 		public SavedImage toBlitlineContainer() {
-			return new SavedImage(imageIdentifier, quality, saveMetadata, false, null, null, exifOrNull());
+			return new SavedImage(imageIdentifier, quality, saveMetadata, false, null, null, exifOrNull(), paramsOrNull());
 		}
 
 		public SavedImage butSkipSave() {
